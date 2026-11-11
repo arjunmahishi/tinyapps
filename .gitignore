@@ -1,0 +1,7 @@
+web/
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+PLAN.md
+__pycache__/
