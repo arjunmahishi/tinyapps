@@ -5,3 +5,6 @@ data/
 *.sqlite-shm
 PLAN.md
 __pycache__/
+*.egg-info/
+build/
+dist/

@@ -1,4 +1,4 @@
-"""End-to-end check for server.py, against a temporary content folder."""
+"""End-to-end check for tinyapps/server.py, against a temporary content folder."""
 
 import http.client
 import json
@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from http.server import ThreadingHTTPServer
 
-import server
+from tinyapps import server
 
 
 class TinyappsTest(unittest.TestCase):

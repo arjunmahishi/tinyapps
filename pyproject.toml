@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tinyapps"
+version = "0.1.0"
+description = "An extremely minimal, self-hosted, stateful app builder your agents can use."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Arjun Mahishi", email = "arjun.mahishi@gmail.com" }]
+requires-python = ">=3.10"
+
+[project.urls]
+Homepage = "https://github.com/arjunmahishi/tinyapps"
+
+[project.scripts]
+tinyapps = "tinyapps.server:main"
+
+[tool.setuptools]
+packages = ["tinyapps"]
+
+[tool.setuptools.package-data]
+tinyapps = ["SKILL.md"]

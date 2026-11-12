@@ -23,7 +23,7 @@ small, on your own hardware, and driven by your own agent.
 
 ## How it works
 
-![How tinyapps works](docs/how-it-works.png)
+![How tinyapps works](https://raw.githubusercontent.com/arjunmahishi/tinyapps/main/docs/how-it-works.png)
 
 - Your agent writes `~/tinyapps/web/apps/<name>.html` and creates the
   database `~/tinyapps/data/<name>.sqlite` directly with `sqlite3`.
@@ -40,19 +40,21 @@ small, on your own hardware, and driven by your own agent.
 Requires Python 3.10+.
 
 ```bash
-git clone https://github.com/arjunmahishi/tinyapps ~/dev/tinyapps
-python3 ~/dev/tinyapps/server.py        # serves ~/tinyapps on :8080
+pipx install tinyapps
+tinyapps        # serves ~/tinyapps on :8080
 ```
 
-Then give your agent `skill/SKILL.md`. For Hermes:
+Then give your agent the skill, printed by `tinyapps skill`. For Hermes:
 
 ```bash
-mkdir -p ~/.hermes/skills/productivity/tinyapps
-cp -n ~/dev/tinyapps/skill/SKILL.md ~/.hermes/skills/productivity/tinyapps/
+f=~/.hermes/skills/productivity/tinyapps/SKILL.md
+mkdir -p "${f%/*}" && [ -e "$f" ] || tinyapps skill > "$f"
 ```
 
 The agent asks for your base URL on first use. It refines its copy of the
-skill over time, so merge updates into it rather than overwriting (`-n`).
+skill over time, so the command above never overwrites it. After
+`pipx upgrade tinyapps`, compare it with `tinyapps skill` and merge any
+changes by hand.
 The skill is plain Markdown, so any agent that can write files can use it.
 
 > **tinyapps has no login.** Anyone who can reach it can open every page and
@@ -63,13 +65,13 @@ The skill is plain Markdown, so any agent that can write files can use it.
 
 This is my setup, not a requirement. Any agent, machine or proxy works.
 
-![My setup](docs/my-setup.png)
+![My setup](https://raw.githubusercontent.com/arjunmahishi/tinyapps/main/docs/my-setup.png)
 
 - **Machine**: a 10-year-old Dell Inspiron 3541 laptop (AMD A6-6310, 4 GB
   RAM, spinning 500 GB disk) running Debian 13.
 - **Agent**: [Hermes Agent](https://github.com/NousResearch/hermes-agent). I
   ask it for apps from chat; it writes them and replies with the link.
-- **Service**: `tinyapps.service` is a systemd user unit tied to Hermes, so it
+- **Service**: a systemd user unit tied to Hermes, so it
   starts and stops with the agent.
 - **Remote access**: a Cloudflare Tunnel publishes it on a subdomain, with
   Cloudflare Access (Google login, my email only) in front. At home I also

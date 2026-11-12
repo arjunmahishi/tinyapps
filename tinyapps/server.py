@@ -2,9 +2,10 @@
 """tinyapps: serve AI-written HTML artifacts and apps; each app gets its own SQLite database.
 
 Usage:
-  server.py                        serve on TINYAPPS_PORT (default 8080)
-  server.py delete apps <name>     delete an app page and its database
-  server.py delete artifacts <name>
+  tinyapps                         serve on TINYAPPS_PORT (default 8080)
+  tinyapps delete apps <name>      delete an app page and its database
+  tinyapps delete artifacts <name>
+  tinyapps skill                   print the agent skill (SKILL.md)
 """
 
 import json
@@ -13,6 +14,7 @@ import re
 import sqlite3
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from importlib import resources
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -212,6 +214,8 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     if sys.argv[1:2] == ["delete"] and len(sys.argv) == 4:
         return delete(sys.argv[2], sys.argv[3])
+    if sys.argv[1:] == ["skill"]:
+        return print(resources.files("tinyapps").joinpath("SKILL.md").read_text(), end="")
     if len(sys.argv) > 1:
         sys.exit(__doc__)
     for kind in KINDS:
