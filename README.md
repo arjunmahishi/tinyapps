@@ -1,131 +1,76 @@
 # tinyapps
 
-A tiny, self-hosted home for AI-built web pages. Ask your agent for a tool or a
-page; it writes a single HTML file and replies with a link.
+An extremely minimal, self-hosted, stateful app builder your agents can use.
 
-- **Artifacts** — static HTML pages (reports, charts, mockups) at `/artifacts/<name>`.
-  Like Claude artifacts, but they persist at a URL.
-- **Apps** — HTML pages with their own SQLite database at `/apps/<name>`, reached
-  from the page through a small `app.sql()` bridge.
+Ask your agent for a tool. It writes one HTML file, and if the app needs to
+remember things, a SQLite database next to it. The page is live at a URL on
+your own machine as soon as the file exists. No framework, no build step, no
+deploy: one Python file (standard library only) and a skill that teaches your
+agent the rules.
 
-There's no build step, no deploy and no framework: write the file and it's live.
-One Python file, standard library only. Built for a single owner on a single
-machine, running alongside [Hermes Agent](https://github.com/NousResearch/hermes-agent),
-though any agent that can write files works.
+- **Apps** at `/apps/<name>`: an HTML page with its own SQLite database.
+- **Artifacts** at `/artifacts/<name>`: a static page (report, chart, mockup).
+
+## Alternatives
+
+There are plenty, and most do far more. Pick tinyapps only if you want it
+small, on your own hardware, and driven by your own agent.
+
+- **[Claude Artifacts](https://support.anthropic.com/en/articles/9487310-what-are-artifacts-and-how-do-i-use-them) / [ChatGPT Canvas](https://openai.com/index/introducing-canvas/)**: pages and small apps the assistant builds inside a chat. Hosted by the vendor and tied to their chat product.
+- **[Lovable](https://lovable.dev), [Bolt.new](https://bolt.new), [v0](https://v0.app), [Replit Agent](https://replit.com/products/agent)**: describe an app and get a complete full-stack project, built and hosted on their cloud.
+- **[Val Town](https://www.val.town)**: a hosted platform that instantly deploys small TypeScript apps and APIs, with built-in SQLite. Made for people and their agents.
+- **[PocketBase](https://pocketbase.io)**: an open-source backend in one file (database, auth, file storage, admin UI) that you self-host. You or your agent still build and serve the frontend.
 
 ## How it works
 
-```text
-agent ──writes──▶ ~/tinyapps/web/apps/todo.html
-      ──writes──▶ ~/tinyapps/data/todo.sqlite     (directly, with sqlite3)
+![How tinyapps works](docs/how-it-works.png)
 
-browser ──▶ /apps/todo          host page
-              └─ <iframe sandbox>  /apps/todo/frame  (your HTML + injected app SDK)
-                    │ postMessage
-                    ▼
-            host page ──POST /api/apps/todo/sql──▶ server ──▶ todo.sqlite
-```
-
-- Pages run in a sandboxed iframe with an opaque origin and `connect-src 'none'`,
-  so app code can't make network requests or touch the host. Its only way
-  out is `app.sql()`, which is relayed by the host page.
+- Your agent writes `~/tinyapps/web/apps/<name>.html` and creates the
+  database `~/tinyapps/data/<name>.sqlite` directly with `sqlite3`.
+- The browser loads a host page that runs your HTML in a sandboxed iframe. App
+  code can't make network requests; its only way out is
+  `await app.sql(sql, params)`, which the host relays to the server.
 - The server picks the database from the app name in the URL, never from the
-  request, and only accepts API calls from its own host.
-- Code and content are separate: this repo holds the server; pages and
-  databases live in `~/tinyapps/`, so they never end up in git and databases
-  are never served over HTTP.
+  request. Databases are never served over HTTP.
+- Code and content are separate: this repo is the server; your pages and data
+  live in `~/tinyapps/` and never end up in git.
 
-## Writing an app
+## Run it
 
-One self-contained HTML file. CDN scripts are fine.
-
-```html
-<!doctype html>
-<html>
-<head><title>todo</title></head>
-<body>
-  <ul id="list"></ul>
-  <script>
-    (async () => {
-      await app.sql("CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT)");
-      const [{ id }] = await app.sql("INSERT INTO todos (title) VALUES (?) RETURNING id", ["milk"]);
-      const rows = await app.sql("SELECT id, title FROM todos ORDER BY id");
-      document.getElementById("list").innerHTML = rows.map((r) => `<li>${r.title}</li>`).join("");
-    })().catch((err) => document.body.append(`Error: ${err.message}`));
-  </script>
-</body>
-</html>
-```
-
-`app.sql(sql, params)` runs one statement and resolves to an array of row
-objects. Use `?` parameters for values and `RETURNING` for new ids.
-
-Because of the sandbox, pages can't use `localStorage`, `fetch`/XHR (apps
-only), `alert`/`confirm`, popups or form submission.
-
-## Install
-
-Requires Python 3.10+ and, for the service, systemd.
+Requires Python 3.10+.
 
 ```bash
-git clone <this repo> ~/dev/tinyapps
-cd ~/dev/tinyapps
-python3 -m unittest test_server        # optional
-python3 server.py                      # serves ~/tinyapps on :8080
+git clone https://github.com/arjunmahishi/tinyapps ~/dev/tinyapps
+python3 ~/dev/tinyapps/server.py        # serves ~/tinyapps on :8080
 ```
 
-Settings (environment variables):
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `TINYAPPS_HOME` | `~/tinyapps` | Content folder (`web/` and `data/`) |
-| `TINYAPPS_PORT` | `8080` | Listen port (binds all interfaces) |
-
-### Run as a service
-
-`tinyapps.service` is a systemd user unit tied to `hermes-gateway.service`, so
-it starts and stops with the agent. For a different agent, or to run it on its
-own, edit the `After`, `PartOf` and `WantedBy` lines (for example
-`WantedBy=default.target`).
-
-```bash
-systemctl --user link ~/dev/tinyapps/tinyapps.service
-systemctl --user enable --now tinyapps
-```
-
-### Teach the agent
-
-`skill/SKILL.md` is a [Hermes skill](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills)
-that explains how to create, update and delete apps and artifacts, and how to
-manage app databases. Copy it in; the agent asks for your base URL on first use
-and fills it in:
+Then give your agent `skill/SKILL.md`. For Hermes:
 
 ```bash
 mkdir -p ~/.hermes/skills/productivity/tinyapps
-cp -n skill/SKILL.md ~/.hermes/skills/productivity/tinyapps/
+cp -n ~/dev/tinyapps/skill/SKILL.md ~/.hermes/skills/productivity/tinyapps/
 ```
 
-`-n` keeps an existing copy: the agent refines its copy over time, so merge
-updates into it rather than overwriting.
+The agent asks for your base URL on first use. It refines its copy of the
+skill over time, so merge updates into it rather than overwriting (`-n`).
+The skill is plain Markdown, so any agent that can write files can use it.
 
-It's plain Markdown, so other agents can use it as instructions too.
+> **tinyapps has no login.** Anyone who can reach it can open every page and
+> read or change every app's data. Keep it on a trusted network or behind an
+> authenticating proxy.
 
-## Managing content
+## How I use it
 
-```bash
-ls ~/tinyapps/web/apps ~/tinyapps/web/artifacts
-python3 server.py delete apps <name>        # removes the page and its database
-python3 server.py delete artifacts <name>
-```
+This is my setup, not a requirement. Any agent, machine or proxy works.
 
-Names are lowercase letters, digits and dashes. Deletion is permanent, so back
-up `~/tinyapps/data/`.
+![My setup](docs/my-setup.png)
 
-## Security notes
-
-tinyapps has no login. It's meant for a trusted network or to sit behind an
-authenticating proxy such as Cloudflare Tunnel + Zero Trust Access. Anyone who
-can reach it can open every page and read or change every app's data.
-
-App code has full control of its own database. Pages can load scripts from
-the internet, so treat them as only partly isolated.
+- **Machine**: a 10-year-old Dell Inspiron 3541 laptop (AMD A6-6310, 4 GB
+  RAM, spinning 500 GB disk) running Debian 13.
+- **Agent**: [Hermes Agent](https://github.com/NousResearch/hermes-agent). I
+  ask it for apps from chat; it writes them and replies with the link.
+- **Service**: `tinyapps.service` is a systemd user unit tied to Hermes, so it
+  starts and stops with the agent.
+- **Remote access**: a Cloudflare Tunnel publishes it on a subdomain, with
+  Cloudflare Access (Google login, my email only) in front. At home I also
+  reach it directly over the LAN.
