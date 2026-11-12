@@ -97,13 +97,16 @@ systemctl --user enable --now tinyapps
 
 `skill/SKILL.md` is a [Hermes skill](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills)
 that explains how to create, update and delete apps and artifacts, and how to
-manage app databases. Set the base URL in it to wherever you serve tinyapps,
-then copy it in:
+manage app databases. Copy it in; the agent asks for your base URL on first use
+and fills it in:
 
 ```bash
 mkdir -p ~/.hermes/skills/productivity/tinyapps
-cp skill/SKILL.md ~/.hermes/skills/productivity/tinyapps/
+cp -n skill/SKILL.md ~/.hermes/skills/productivity/tinyapps/
 ```
+
+`-n` keeps an existing copy: the agent refines its copy over time, so merge
+updates into it rather than overwriting.
 
 It's plain Markdown, so other agents can use it as instructions too.
 
