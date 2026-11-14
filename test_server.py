@@ -88,6 +88,16 @@ class TinyappsTest(unittest.TestCase):
         # Artifacts have no database.
         self.assertEqual(self.sql("SELECT 1", app="report")[0], 404)
 
+    def test_combined_collection_pages(self):
+        for path in ("/apps", "/artifacts"):
+            with self.subTest(path=path):
+                res, data = self.request("GET", path)
+                self.assertEqual(res.status, 200)
+                self.assertIn('<section id="apps"', data)
+                self.assertIn('<section id="artifacts"', data)
+                self.assertIn('href="/apps/todo"', data)
+                self.assertIn('href="/artifacts/report"', data)
+
     def test_artifact(self):
         res, data = self.request("GET", "/artifacts/report")
         self.assertEqual(res.status, 200)
